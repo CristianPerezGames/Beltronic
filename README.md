@@ -45,6 +45,8 @@ npm run dev
 2. En *SQL Editor* ejecuta [supabase/schema.sql](supabase/schema.sql).
 3. En `.env` pon `VITE_STORAGE=supabase`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_KEY` (la *anon key*).
 
+> Si ya tenías el proyecto creado antes de que existiera la sección de proveedores, ejecuta solo la parte de `proveedores` del esquema (`create table`, `enable row level security` y `create policy`).
+
 > Las políticas del esquema dejan las tablas abiertas para empezar rápido. Antes de usarlo en serio, agrega inicio de sesión y restringe las políticas.
 
 ### Tu propio backend

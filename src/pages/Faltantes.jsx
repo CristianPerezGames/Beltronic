@@ -65,7 +65,7 @@ export default function Faltantes({ onComprar }) {
       ) : (
         <>
           <div className="card table-wrap">
-            <table>
+            <table className="table-cards">
               <thead>
                 <tr>
                   <th />
@@ -81,19 +81,19 @@ export default function Faltantes({ onComprar }) {
               <tbody>
                 {lista.map((p) => (
                   <tr key={p.id} className={p.stock <= 0 ? 'row-danger' : ''}>
-                    <td>
+                    <td className="cell-check">
                       <input type="checkbox" checked={seleccion.has(p.id)} onChange={() => toggle(p.id)} />
                     </td>
-                    <td>
+                    <td className="cell-title">
                       {p.nombre}
                       {p.stock <= 0 && <span className="badge badge-danger ml">Agotado</span>}
                       <div className="muted small">{p.categoria}</div>
                     </td>
-                    <td>{p.proveedor || '—'}</td>
-                    <td className="num"><StockBadge producto={p} /></td>
-                    <td className="num">{num(p.stockMinimo)}</td>
-                    <td className="num">{num(Math.max(p.stockMinimo - p.stock, 0))}</td>
-                    <td className="num">
+                    <td data-label="Proveedor">{p.proveedor || '—'}</td>
+                    <td className="num" data-label="Stock"><StockBadge producto={p} /></td>
+                    <td className="num" data-label="Mínimo">{num(p.stockMinimo)}</td>
+                    <td className="num" data-label="Faltan">{num(Math.max(p.stockMinimo - p.stock, 0))}</td>
+                    <td className="num" data-label="Pedir">
                       <input
                         type="number"
                         min="1"
@@ -103,7 +103,7 @@ export default function Faltantes({ onComprar }) {
                         onChange={(e) => setCantidades({ ...cantidades, [p.id]: Number(e.target.value) })}
                       />
                     </td>
-                    <td className="num">{money(cantidad(p) * p.precioCompra)}</td>
+                    <td className="num" data-label="Costo est.">{money(cantidad(p) * p.precioCompra)}</td>
                   </tr>
                 ))}
               </tbody>

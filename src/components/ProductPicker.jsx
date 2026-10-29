@@ -46,7 +46,9 @@ export default function ProductPicker({ productos, value, onChange, showStock, a
   // La lista va con position: fixed para que no la recorte la tabla (que tiene scroll).
   const abrir = () => {
     const r = inputRef.current.getBoundingClientRect();
-    setPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 340) });
+    // En celulares la lista no debe salirse de la pantalla.
+    const width = Math.min(Math.max(r.width, 340), window.innerWidth - 16);
+    setPos({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), width });
     setQuery('');
     setActive(0);
     setOpen(true);

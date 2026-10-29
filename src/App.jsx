@@ -3,6 +3,7 @@ import { useData } from './data/DataContext.jsx';
 import { faltantes } from './data/stats.js';
 import Resumen from './pages/Resumen.jsx';
 import Inventario from './pages/Inventario.jsx';
+import Proveedores from './pages/Proveedores.jsx';
 import Compras from './pages/Compras.jsx';
 import Ventas from './pages/Ventas.jsx';
 import Faltantes from './pages/Faltantes.jsx';
@@ -11,6 +12,7 @@ import Ajustes from './pages/Ajustes.jsx';
 const PAGES = [
   { id: 'resumen', label: 'Resumen y estadísticas', icon: '📊' },
   { id: 'inventario', label: 'Inventario', icon: '📦' },
+  { id: 'proveedores', label: 'Proveedores', icon: '🏭' },
   { id: 'compras', label: 'Compras', icon: '🚚' },
   { id: 'ventas', label: 'Ventas', icon: '🧾' },
   { id: 'faltantes', label: 'Faltantes', icon: '⚠️' },
@@ -32,6 +34,7 @@ export default function App() {
   const navigate = (id) => {
     setPage(id);
     setMenuOpen(false);
+    window.scrollTo(0, 0);
   };
 
   // Trae los cambios hechos desde otros equipos.
@@ -86,10 +89,20 @@ export default function App() {
         )}
       </aside>
 
+      {menuOpen && <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} />}
+
       <main className="content">
-        <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
-          ☰ Menú
-        </button>
+        <div className="mobile-bar">
+          <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú">
+            ☰
+          </button>
+          <strong>{PAGES.find((p) => p.id === page)?.label}</strong>
+          {numFaltantes > 0 && (
+            <button className="nav-badge" onClick={() => navigate('faltantes')} title="Faltantes">
+              ⚠ {numFaltantes}
+            </button>
+          )}
+        </div>
         {error && <div className="alert alert-error">Error al cargar los datos: {error}</div>}
         {loading ? (
           <p className="muted">Cargando…</p>
@@ -97,6 +110,7 @@ export default function App() {
           <>
             {page === 'resumen' && <Resumen onNavigate={navigate} />}
             {page === 'inventario' && <Inventario />}
+            {page === 'proveedores' && <Proveedores />}
             {page === 'compras' && (
               <Compras prefill={compraPrefill} onPrefillUsed={() => setCompraPrefill(null)} />
             )}

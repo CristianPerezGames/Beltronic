@@ -26,7 +26,7 @@ export default function ItemsEditor({ items, onChange, productos, priceKey, pric
   return (
     <div className="items-editor">
       <div className="table-wrap">
-        <table>
+        <table className="table-cards">
           <thead>
             <tr>
               <th>Producto</th>
@@ -43,7 +43,7 @@ export default function ItemsEditor({ items, onChange, productos, priceKey, pric
               const sinStock = showStock && p && Number(item.cantidad) > p.stock;
               return (
                 <tr key={index}>
-                  <td className="picker-cell">
+                  <td className="picker-cell cell-title">
                     <ProductPicker
                       productos={productos}
                       value={item.productoId}
@@ -53,9 +53,9 @@ export default function ItemsEditor({ items, onChange, productos, priceKey, pric
                     />
                   </td>
                   {showStock && (
-                    <td className="num">{p ? `${num(p.stock)} ${p.unidad}` : '—'}</td>
+                    <td className="num" data-label="Disponible">{p ? `${num(p.stock)} ${p.unidad}` : '—'}</td>
                   )}
-                  <td className="num">
+                  <td className="num" data-label="Cantidad">
                     <input
                       type="number"
                       min="0.01"
@@ -66,7 +66,7 @@ export default function ItemsEditor({ items, onChange, productos, priceKey, pric
                       required
                     />
                   </td>
-                  <td className="num">
+                  <td className="num" data-label={priceLabel}>
                     <input
                       type="number"
                       min="0"
@@ -76,10 +76,10 @@ export default function ItemsEditor({ items, onChange, productos, priceKey, pric
                       onChange={(e) => update(index, { [priceKey]: e.target.value })}
                     />
                   </td>
-                  <td className="num">
+                  <td className="num" data-label="Subtotal">
                     {money((Number(item.cantidad) || 0) * (Number(item[priceKey]) || 0))}
                   </td>
-                  <td>
+                  <td className="row-actions">
                     <button type="button" className="btn-icon" onClick={() => remove(index)} title="Quitar">
                       ✕
                     </button>

@@ -6,10 +6,11 @@ import * as services from './services.js';
 
 const DataContext = createContext(null);
 
-const EMPTY = { productos: [], compras: [], ventas: [] };
+const EMPTY = { productos: [], proveedores: [], compras: [], ventas: [] };
 const byFechaDesc = (a, b) => (b.fecha + b.creadoEn).localeCompare(a.fecha + a.creadoEn);
 const ORDEN = {
   productos: (a, b) => a.nombre.localeCompare(b.nombre),
+  proveedores: (a, b) => a.nombre.localeCompare(b.nombre),
   compras: byFechaDesc,
   ventas: byFechaDesc,
 };
@@ -39,13 +40,19 @@ export function DataProvider({ children }) {
   const refresh = useCallback(async () => {
     try {
       const desde = desdeHistorial();
-      const [productos, compras, ventas] = await Promise.all([
+      const [productos, proveedores, compras, ventas] = await Promise.all([
         db.list('productos'),
+        // Si la base de datos aún no tiene la tabla de proveedores, la app sigue funcionando sin ella.
+        db.list('proveedores').catch((e) => {
+          console.warn('No se pudieron cargar los proveedores:', e.message);
+          return [];
+        }),
         db.list('compras', { desde }),
         db.list('ventas', { desde }),
       ]);
       setData({
         productos: productos.sort(ORDEN.productos),
+        proveedores: proveedores.sort(ORDEN.proveedores),
         compras: compras.sort(ORDEN.compras),
         ventas: ventas.sort(ORDEN.ventas),
       });
@@ -89,6 +96,10 @@ export function DataProvider({ children }) {
       crearProducto: run(services.crearProducto),
       actualizarProducto: run(services.actualizarProducto),
       eliminarProducto: run(services.eliminarProducto),
+      crearProveedor: run(services.crearProveedor),
+      actualizarProveedor: run(services.actualizarProveedor),
+      eliminarProveedor: run(services.eliminarProveedor),
+      registrarProveedores: run(services.registrarProveedores),
       registrarCompra: run(services.registrarCompra),
       eliminarCompra: run(services.eliminarCompra),
       registrarVenta: run(services.registrarVenta),

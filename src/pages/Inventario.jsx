@@ -6,7 +6,7 @@ import StockBadge from '../components/StockBadge.jsx';
 import { money, num, downloadFile } from '../utils/format.js';
 
 export default function Inventario() {
-  const { productos, actions } = useData();
+  const { productos, proveedores, actions } = useData();
   const [busqueda, setBusqueda] = useState('');
   const [categoria, setCategoria] = useState('');
   const [editando, setEditando] = useState(null); // null | 'nuevo' | producto
@@ -81,14 +81,14 @@ export default function Inventario() {
       </div>
 
       <div className="card table-wrap">
-        <table>
+        <table className="table-cards">
           <thead>
             <tr>
               <th>Código</th>
               <th>Producto</th>
               <th>Categoría</th>
+              <th>Proveedor</th>
               <th className="num">Stock</th>
-              <th className="num">Mínimo</th>
               <th className="num">P. compra</th>
               <th className="num">P. venta</th>
               <th className="num">Margen</th>
@@ -98,19 +98,16 @@ export default function Inventario() {
           <tbody>
             {filtrados.map((p) => (
               <tr key={p.id}>
-                <td className="mono">{p.codigo || '—'}</td>
-                <td>
-                  {p.nombre}
-                  {p.proveedor && <div className="muted small">{p.proveedor}</div>}
-                </td>
-                <td>{p.categoria}</td>
-                <td className="num">
+                <td className="mono" data-label="Código">{p.codigo || '—'}</td>
+                <td className="cell-title">{p.nombre}</td>
+                <td data-label="Categoría">{p.categoria}</td>
+                <td data-label="Proveedor">{p.proveedor || '—'}</td>
+                <td className="num" data-label="Stock">
                   <StockBadge producto={p} /> <span className="muted small">{p.unidad}</span>
                 </td>
-                <td className="num">{num(p.stockMinimo)}</td>
-                <td className="num">{money(p.precioCompra)}</td>
-                <td className="num">{money(p.precioVenta)}</td>
-                <td className="num">
+                <td className="num" data-label="P. compra">{money(p.precioCompra)}</td>
+                <td className="num" data-label="P. venta">{money(p.precioVenta)}</td>
+                <td className="num" data-label="Margen">
                   {p.precioCompra > 0
                     ? `${(((p.precioVenta - p.precioCompra) / p.precioCompra) * 100).toFixed(0)}%`
                     : '—'}
@@ -139,11 +136,15 @@ export default function Inventario() {
       {editando && (
         <Modal title={editando === 'nuevo' ? 'Nuevo producto' : 'Editar producto'} onClose={() => setEditando(null)}>
           <ProductForm
+            key={editando === 'nuevo' ? 'nuevo' : editando.id}
             initial={editando === 'nuevo' ? {} : editando}
             productos={productos}
             categorias={categorias}
+            proveedores={proveedores}
             onSubmit={guardar}
             onCancel={() => setEditando(null)}
+            onEditarExistente={setEditando}
+            onNuevoProveedor={actions.crearProveedor}
           />
         </Modal>
       )}

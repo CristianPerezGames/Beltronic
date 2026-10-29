@@ -91,7 +91,7 @@ export default function Ventas() {
       )}
 
       <div className="card table-wrap">
-        <table>
+        <table className="table-cards">
           <thead>
             <tr>
               <th>Fecha</th>
@@ -106,11 +106,11 @@ export default function Ventas() {
             {ventas.map((v) => (
               <Fragment key={v.id}>
                 <tr className="clickable" onClick={() => setAbierta(abierta === v.id ? null : v.id)}>
-                  <td>{formatDate(v.fecha)}</td>
-                  <td>{v.cliente || '—'}</td>
-                  <td className="num">{v.items.length}</td>
-                  <td className="num">{money(v.total)}</td>
-                  <td className="num">{money(v.total - (v.costo || 0))}</td>
+                  <td className="cell-title">{formatDate(v.fecha)}</td>
+                  <td data-label="Cliente">{v.cliente || '—'}</td>
+                  <td className="num" data-label="Productos">{v.items.length}</td>
+                  <td className="num" data-label="Total">{money(v.total)}</td>
+                  <td className="num" data-label="Ganancia">{money(v.total - (v.costo || 0))}</td>
                   <td className="row-actions">
                     <button
                       className="btn-icon danger"

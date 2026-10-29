@@ -6,7 +6,7 @@ import { money, num, today, formatDate } from '../utils/format.js';
 const lineaVacia = () => ({ productoId: '', cantidad: 1, costoUnitario: 0 });
 
 export default function Compras({ prefill, onPrefillUsed }) {
-  const { productos, compras, actions, historialMeses } = useData();
+  const { productos, proveedores: listaProveedores, compras, actions, historialMeses } = useData();
   const [mostrarForm, setMostrarForm] = useState(Boolean(prefill));
   const [form, setForm] = useState(() => ({
     fecha: today(),
@@ -52,7 +52,7 @@ export default function Compras({ prefill, onPrefillUsed }) {
     await actions.eliminarCompra(compra);
   };
 
-  const proveedores = [...new Set(productos.map((p) => p.proveedor).filter(Boolean))];
+  const proveedores = [...new Set([...listaProveedores.map((p) => p.nombre), ...productos.map((p) => p.proveedor)].filter(Boolean))];
 
   return (
     <section>
@@ -120,7 +120,7 @@ export default function Compras({ prefill, onPrefillUsed }) {
       )}
 
       <div className="card table-wrap">
-        <table>
+        <table className="table-cards">
           <thead>
             <tr>
               <th>Fecha</th>
@@ -157,11 +157,11 @@ function CompraRow({ compra, abierta, onToggle, onEliminar }) {
   return (
     <>
       <tr className="clickable" onClick={onToggle}>
-        <td>{formatDate(compra.fecha)}</td>
-        <td>{compra.proveedor || '—'}</td>
-        <td>{compra.factura || '—'}</td>
-        <td className="num">{compra.items.length}</td>
-        <td className="num">{money(compra.total)}</td>
+        <td className="cell-title">{formatDate(compra.fecha)}</td>
+        <td data-label="Proveedor">{compra.proveedor || '—'}</td>
+        <td data-label="Factura">{compra.factura || '—'}</td>
+        <td className="num" data-label="Productos">{compra.items.length}</td>
+        <td className="num" data-label="Total">{money(compra.total)}</td>
         <td className="row-actions">
           <button
             className="btn-icon danger"

@@ -17,6 +17,16 @@ create table if not exists productos (
   "actualizadoEn" timestamptz default now()
 );
 
+create table if not exists proveedores (
+  id text primary key,
+  nombre text not null,
+  contacto text default '',
+  telefono text default '',
+  email text default '',
+  notas text default '',
+  "creadoEn" timestamptz default now()
+);
+
 create table if not exists compras (
   id text primary key,
   fecha date not null,
@@ -42,10 +52,12 @@ create table if not exists ventas (
 -- para empezar. Antes de usarlo en producción agrega autenticación y restringe
 -- las políticas a usuarios autenticados.
 alter table productos enable row level security;
+alter table proveedores enable row level security;
 alter table compras enable row level security;
 alter table ventas enable row level security;
 
 create policy "acceso abierto productos" on productos for all using (true) with check (true);
+create policy "acceso abierto proveedores" on proveedores for all using (true) with check (true);
 create policy "acceso abierto compras" on compras for all using (true) with check (true);
 create policy "acceso abierto ventas" on ventas for all using (true) with check (true);
 

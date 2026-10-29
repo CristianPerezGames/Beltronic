@@ -96,5 +96,11 @@ export function crearDatosEjemplo() {
     });
   }
 
-  return { productos, compras, ventas };
+  const proveedores = [...new Set(BASE.map((b) => b[4]))].map((nombre) => ({
+    id: newId(),
+    nombre, contacto: '', telefono: '', email: '', notas: '',
+    creadoEn: now,
+  }));
+
+  return { productos, proveedores, compras, ventas };
 }

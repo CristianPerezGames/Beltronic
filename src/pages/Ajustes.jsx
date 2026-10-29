@@ -4,7 +4,7 @@ import { crearDatosEjemplo } from '../data/sampleData.js';
 import { downloadFile, num, today } from '../utils/format.js';
 
 export default function Ajustes() {
-  const { productos, compras, ventas, actions, storageName, isLocal } = useData();
+  const { productos, proveedores, compras, ventas, actions, storageName, isLocal } = useData();
   const [mensaje, setMensaje] = useState(null);
   const fileRef = useRef(null);
 
@@ -40,7 +40,7 @@ export default function Ajustes() {
   };
 
   const borrar = () => {
-    if (!confirm('¿Borrar TODOS los productos, compras y ventas? Esta acción no se puede deshacer.')) return;
+    if (!confirm('¿Borrar TODOS los productos, proveedores, compras y ventas? Esta acción no se puede deshacer.')) return;
     ejecutar(() => actions.borrarTodo(), 'Todos los datos fueron borrados.');
   };
 
@@ -65,6 +65,7 @@ export default function Ajustes() {
           </p>
           <ul className="detail-list">
             <li><span>Productos</span><span>{num(productos.length)}</span></li>
+            <li><span>Proveedores</span><span>{num(proveedores.length)}</span></li>
             <li><span>Compras</span><span>{num(compras.length)}</span></li>
             <li><span>Ventas</span><span>{num(ventas.length)}</span></li>
           </ul>
@@ -100,7 +101,7 @@ export default function Ajustes() {
 
         <div className="card card-danger">
           <h2>Zona de peligro</h2>
-          <p className="muted small">Elimina todos los productos, compras y ventas.</p>
+          <p className="muted small">Elimina todos los productos, proveedores, compras y ventas.</p>
           <button className="btn btn-danger" onClick={borrar}>Borrar todos los datos</button>
         </div>
       </div>

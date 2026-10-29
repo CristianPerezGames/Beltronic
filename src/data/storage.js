@@ -6,7 +6,7 @@ import { createSupabaseAdapter } from './adapters/supabaseAdapter.js';
 // Todo el resto de la app habla con `db`, nunca con un almacenamiento concreto.
 // Para agregar otra base de datos (Firebase, MongoDB, etc.) crea un adaptador
 // con los mismos métodos: list, create, update, remove.
-export const COLLECTIONS = ['productos', 'compras', 'ventas'];
+export const COLLECTIONS = ['productos', 'proveedores', 'compras', 'ventas'];
 
 function createAdapter() {
   switch (config.storage) {

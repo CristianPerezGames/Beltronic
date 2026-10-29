@@ -1,5 +1,7 @@
 import { COLLECTIONS } from './storage.js';
 import { generarCodigo } from './codigos.js';
+import { newId } from '../utils/format.js';
+import { mismoCodigo, mismoNombre } from './coincidencias.js';
 
 // Reglas de negocio. Reciben el adaptador `db` para no depender del almacenamiento.
 // Cada operación devuelve solo lo que cambió ({ upsert, remove }) para que la app
@@ -26,8 +28,21 @@ function normalizeProducto(data) {
   };
 }
 
-// Solo id y código: es lo único que se necesita para validar y generar códigos.
-const listarCodigos = (db) => db.list('productos', { fields: 'id,codigo' });
+// Solo id, código y nombre: es lo único que se necesita para validar y generar códigos.
+const listarCodigos = (db) => db.list('productos', { fields: 'id,codigo,nombre' });
+
+// No se permiten dos productos con el mismo código o nombre (sin importar mayúsculas ni tildes).
+function validarRepetido(producto, existentes, id = null) {
+  const otros = existentes.filter((p) => p.id !== id);
+  const porCodigo = producto.codigo && otros.find((p) => mismoCodigo(p.codigo, producto.codigo));
+  if (porCodigo) {
+    throw new ErrorValidacion(`Ya existe un producto con el código ${porCodigo.codigo} (${porCodigo.nombre})`);
+  }
+  const porNombre = otros.find((p) => mismoNombre(p.nombre, producto.nombre));
+  if (porNombre) {
+    throw new ErrorValidacion(`Ya existe un producto llamado "${porNombre.nombre}"${porNombre.codigo ? ` (${porNombre.codigo})` : ''}`);
+  }
+}
 
 // Con data.codigoAuto el código se calcula aquí, contra los datos actuales,
 // para no repetir uno que se haya creado mientras el formulario estaba abierto.
@@ -36,9 +51,7 @@ export async function crearProducto(db, data) {
   if (!producto.nombre) throw new ErrorValidacion('El producto necesita un nombre');
   const codigos = await listarCodigos(db);
   if (data.codigoAuto) producto.codigo = generarCodigo(producto.categoria, codigos);
-  if (producto.codigo && codigos.some((p) => p.codigo === producto.codigo)) {
-    throw new ErrorValidacion(`Ya existe un producto con el código ${producto.codigo}`);
-  }
+  validarRepetido(producto, codigos);
   const creado = await db.create('productos', { ...producto, creadoEn: now(), actualizadoEn: now() });
   return { upsert: { productos: [creado] } };
 }
@@ -48,9 +61,7 @@ export async function actualizarProducto(db, id, data) {
   if (!producto.nombre) throw new ErrorValidacion('El producto necesita un nombre');
   const codigos = await listarCodigos(db);
   if (data.codigoAuto) producto.codigo = generarCodigo(producto.categoria, codigos, id);
-  if (producto.codigo && codigos.some((p) => p.codigo === producto.codigo && p.id !== id)) {
-    throw new ErrorValidacion(`Ya existe un producto con el código ${producto.codigo}`);
-  }
+  validarRepetido(producto, codigos, id);
   const actualizado = await db.update('productos', id, { ...producto, actualizadoEn: now() });
   return { upsert: { productos: [actualizado] } };
 }
@@ -58,6 +69,64 @@ export async function actualizarProducto(db, id, data) {
 export async function eliminarProducto(db, id) {
   await db.remove('productos', id);
   return { remove: { productos: [id] } };
+}
+
+// ---- Proveedores ----
+// Los productos guardan el nombre del proveedor, así que al renombrarlo se actualizan también.
+
+function normalizeProveedor(data) {
+  return {
+    nombre: (data.nombre || '').trim(),
+    contacto: (data.contacto || '').trim(),
+    telefono: (data.telefono || '').trim(),
+    email: (data.email || '').trim(),
+    notas: (data.notas || '').trim(),
+  };
+}
+
+async function validarProveedor(db, proveedor, id = null) {
+  if (!proveedor.nombre) throw new ErrorValidacion('El proveedor necesita un nombre');
+  const existentes = await db.list('proveedores', { fields: 'id,nombre' });
+  if (existentes.some((p) => p.id !== id && mismoNombre(p.nombre, proveedor.nombre))) {
+    throw new ErrorValidacion(`Ya existe el proveedor "${proveedor.nombre}"`);
+  }
+}
+
+export async function crearProveedor(db, data) {
+  const proveedor = normalizeProveedor(data);
+  await validarProveedor(db, proveedor);
+  const creado = await db.create('proveedores', { ...proveedor, creadoEn: now() });
+  return { upsert: { proveedores: [creado] } };
+}
+
+export async function actualizarProveedor(db, id, data) {
+  const proveedor = normalizeProveedor(data);
+  await validarProveedor(db, proveedor, id);
+  const [anterior] = await db.getMany('proveedores', [id]);
+  const actualizado = await db.update('proveedores', id, proveedor);
+  const productos = [];
+  if (anterior && anterior.nombre !== proveedor.nombre) {
+    const todos = await db.list('productos', { fields: 'id,proveedor' });
+    for (const p of todos.filter((x) => x.proveedor === anterior.nombre)) {
+      productos.push(await db.update('productos', p.id, { proveedor: proveedor.nombre, actualizadoEn: now() }));
+    }
+  }
+  return { upsert: { proveedores: [actualizado], productos } };
+}
+
+// Los productos conservan el nombre del proveedor eliminado.
+export async function eliminarProveedor(db, id) {
+  await db.remove('proveedores', id);
+  return { remove: { proveedores: [id] } };
+}
+
+// Registra de una vez los proveedores que ya aparecen en productos pero no están en la lista.
+export async function registrarProveedores(db, nombres) {
+  const creados = [];
+  for (const nombre of nombres) {
+    creados.push(await db.create('proveedores', { ...normalizeProveedor({ nombre }), creadoEn: now() }));
+  }
+  return { upsert: { proveedores: creados } };
 }
 
 // Trae del almacenamiento solo los productos de las líneas, con su stock actual.
@@ -170,9 +239,17 @@ export async function exportarTodo(db) {
   return data;
 }
 
+// Colecciones que pueden faltar en respaldos hechos con versiones anteriores.
+const OPCIONALES = ['proveedores'];
+
 export async function importarTodo(db, data) {
-  if (!data || COLLECTIONS.some((c) => !Array.isArray(data[c]))) {
+  if (!data || COLLECTIONS.some((c) => !OPCIONALES.includes(c) && !Array.isArray(data[c]))) {
     throw new ErrorValidacion('El archivo no tiene el formato de respaldo de Beltronic');
+  }
+  data = { ...data };
+  if (!Array.isArray(data.proveedores)) {
+    const nombres = [...new Set(data.productos.map((p) => (p.proveedor || '').trim()).filter(Boolean))];
+    data.proveedores = nombres.map((nombre) => ({ id: newId(), ...normalizeProveedor({ nombre }), creadoEn: now() }));
   }
   for (const c of COLLECTIONS) {
     if (db.replaceAll) {
