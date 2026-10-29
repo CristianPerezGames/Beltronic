@@ -294,6 +294,37 @@ export async function eliminarVenta(db, venta) {
   return { upsert: { productos: actualizados }, remove: { ventas: [venta.id] } };
 }
 
+// Importación desde Excel. No registra una compra.
+// lineas: [{ productoId, cantidad, costoUnitario }] de productos que ya existen; se suma la cantidad
+// al stock y, si la línea trae costo, se usa como nuevo precio de compra.
+// nuevos: datos de productos que no existían; se crean con la cantidad como stock inicial.
+export async function agregarInventario(db, { lineas = [], nuevos = [] }) {
+  // Los nuevos se validan todos antes de escribir para no dejar la importación a medias.
+  const codigos = await listarCodigos(db);
+  const porCrear = nuevos.map((data) => {
+    const producto = normalizeProducto(data);
+    if (!producto.nombre) throw new ErrorValidacion('Todos los productos nuevos necesitan un nombre');
+    if (data.codigoAuto) producto.codigo = generarCodigo(producto.categoria, codigos);
+    validarRepetido(producto, codigos);
+    codigos.push({ id: null, codigo: producto.codigo, nombre: producto.nombre });
+    return producto;
+  });
+
+  let actualizados = [];
+  if (lineas.length) {
+    const productos = await productosDe(db, lineas);
+    const items = prepararItems(lineas, productos, 'costoUnitario');
+    actualizados = await ajustarStock(db, productos, items, (i) => i.cantidad, (i, p) => ({
+      precioCompra: i.costoUnitario || p.precioCompra,
+    }));
+  }
+  const creados = [];
+  for (const producto of porCrear) {
+    creados.push(await db.create('productos', { ...producto, creadoEn: now(), actualizadoEn: now() }));
+  }
+  return { upsert: { productos: [...actualizados, ...creados] } };
+}
+
 // ---- Respaldo (siempre con todo el historial) ----
 
 export async function exportarTodo(db) {

@@ -106,6 +106,7 @@ export function DataProvider({ children }) {
       eliminarCompra: run(services.eliminarCompra),
       registrarVenta: run(services.registrarVenta),
       eliminarVenta: run(services.eliminarVenta),
+      agregarInventario: run(services.agregarInventario),
       importarTodo: runYRecargar(services.importarTodo),
       borrarTodo: runYRecargar(services.borrarTodo),
       exportarTodo: () => services.exportarTodo(db),
