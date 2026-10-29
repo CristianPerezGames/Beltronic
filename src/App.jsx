@@ -26,7 +26,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   // Si no existe public/logo.png se muestra el emoji.
   const [logoOk, setLogoOk] = useState(true);
-  // Items precargados al crear una compra desde la página de faltantes.
+  // Proveedor e items precargados al crear una compra desde la página de faltantes.
   const [compraPrefill, setCompraPrefill] = useState(null);
 
   const numFaltantes = faltantes(productos).length;
@@ -44,8 +44,8 @@ export default function App() {
     setActualizando(false);
   };
 
-  const comprarFaltantes = (items) => {
-    setCompraPrefill(items);
+  const comprarFaltantes = (prefill) => {
+    setCompraPrefill(prefill);
     navigate('compras');
   };
 

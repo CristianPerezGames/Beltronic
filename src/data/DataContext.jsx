@@ -101,6 +101,8 @@ export function DataProvider({ children }) {
       eliminarProveedor: run(services.eliminarProveedor),
       registrarProveedores: run(services.registrarProveedores),
       registrarCompra: run(services.registrarCompra),
+      actualizarCompra: run(services.actualizarCompra),
+      recibirCompra: run(services.recibirCompra),
       eliminarCompra: run(services.eliminarCompra),
       registrarVenta: run(services.registrarVenta),
       eliminarVenta: run(services.eliminarVenta),

@@ -35,8 +35,15 @@ create table if not exists compras (
   notas text default '',
   items jsonb not null default '[]',
   total numeric default 0,
+  estado text default 'recibida',
+  "recibidaEn" timestamptz,
   "creadoEn" timestamptz default now()
 );
+
+-- Para bases creadas antes de que existiera el estado de las compras.
+-- Las compras que ya estaban quedan como recibidas (ya habían sumado su stock).
+alter table compras add column if not exists estado text default 'recibida';
+alter table compras add column if not exists "recibidaEn" timestamptz;
 
 create table if not exists ventas (
   id text primary key,

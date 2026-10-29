@@ -171,6 +171,11 @@ function prepararItems(items, productos, priceKey) {
   return [...merged.values()];
 }
 
+// Las compras se registran como pendientes y no tocan el stock hasta que se confirma
+// que la mercadería llegó. Las compras guardadas antes de existir el estado ya habían
+// sumado su stock, por eso sin estado cuentan como recibidas.
+export const compraRecibida = (compra) => compra.estado !== 'pendiente';
+
 export async function registrarCompra(db, data) {
   const productos = await productosDe(db, data.items);
   const items = prepararItems(data.items, productos, 'costoUnitario');
@@ -183,18 +188,76 @@ export async function registrarCompra(db, data) {
     notas: (data.notas || '').trim(),
     items,
     total,
+    estado: 'pendiente',
     creadoEn: now(),
   });
+  return { upsert: { compras: [compra] } };
+}
 
+// Suma al stock lo que llegó y actualiza el precio de compra de cada producto.
+export async function recibirCompra(db, compra) {
+  if (compraRecibida(compra)) throw new ErrorValidacion('Esta compra ya se había recibido');
+  const items = compra.items;
+  const productos = await productosDe(db, items);
+  const actualizada = await db.update('compras', compra.id, { estado: 'recibida', recibidaEn: now() });
   const actualizados = await ajustarStock(db, productos, items, (i) => i.cantidad, (i, p) => ({
     precioCompra: i.costoUnitario || p.precioCompra,
   }));
+  return { upsert: { compras: [actualizada], productos: actualizados } };
+}
+
+// Reemplaza las líneas de una compra. Si ya se había recibido, ajusta el stock solo
+// por la diferencia con lo que había ingresado antes; si está pendiente, no lo toca.
+export async function actualizarCompra(db, anterior, data) {
+  // Se guardan antes de escribir por si el adaptador modifica el objeto original.
+  const itemsAnteriores = anterior.items;
+  const productos = await productosDe(db, [...itemsAnteriores, ...data.items]);
+  // Las líneas de productos que ya se eliminaron se conservan tal como estaban.
+  const huerfanos = itemsAnteriores.filter(
+    (i) => !productos.some((p) => p.id === i.productoId) && data.items.some((x) => x.productoId === i.productoId),
+  );
+  const nuevos = data.items.filter((i) => !huerfanos.some((h) => h.productoId === i.productoId));
+  let items = huerfanos;
+  if (nuevos.some((i) => i.productoId) || !huerfanos.length) {
+    items = [...prepararItems(nuevos, productos, 'costoUnitario'), ...huerfanos];
+  }
+  const total = items.reduce((s, i) => s + i.cantidad * i.costoUnitario, 0);
+
+  const compra = await db.update('compras', anterior.id, {
+    fecha: data.fecha,
+    proveedor: (data.proveedor || '').trim(),
+    factura: (data.factura || '').trim(),
+    notas: (data.notas || '').trim(),
+    items,
+    total,
+  });
+  if (!compraRecibida(anterior)) return { upsert: { compras: [compra] } };
+
+  // El precio de compra del producto solo se actualiza en líneas nuevas o con otro costo,
+  // para que corregir una compra vieja no pise un precio más reciente.
+  const lineaDe = (lista, id) => lista.find((i) => i.productoId === id);
+  const actualizados = [];
+  for (const p of productos) {
+    const nueva = lineaDe(items, p.id);
+    const vieja = lineaDe(itemsAnteriores, p.id);
+    const delta = (nueva?.cantidad || 0) - (vieja?.cantidad || 0);
+    const cambioCosto = nueva?.costoUnitario && nueva.costoUnitario !== vieja?.costoUnitario;
+    const precioCompra = cambioCosto ? nueva.costoUnitario : p.precioCompra;
+    if (delta === 0 && precioCompra === p.precioCompra) continue;
+    actualizados.push(
+      await db.update('productos', p.id, { stock: Number(p.stock) + delta, precioCompra, actualizadoEn: now() }),
+    );
+  }
   return { upsert: { compras: [compra], productos: actualizados } };
 }
 
+// Si la compra ya se había recibido, descuenta del stock lo que había ingresado.
 export async function eliminarCompra(db, compra) {
-  const productos = await productosDe(db, compra.items);
-  const actualizados = await ajustarStock(db, productos, compra.items, (i) => -i.cantidad);
+  let actualizados = [];
+  if (compraRecibida(compra)) {
+    const productos = await productosDe(db, compra.items);
+    actualizados = await ajustarStock(db, productos, compra.items, (i) => -i.cantidad);
+  }
   await db.remove('compras', compra.id);
   return { upsert: { productos: actualizados }, remove: { compras: [compra.id] } };
 }

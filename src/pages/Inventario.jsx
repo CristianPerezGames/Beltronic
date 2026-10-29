@@ -5,10 +5,15 @@ import ProductForm from '../components/ProductForm.jsx';
 import StockBadge from '../components/StockBadge.jsx';
 import { money, num, downloadFile } from '../utils/format.js';
 
+const SIN_PROVEEDOR = '__sin_proveedor__';
+const comparar = (a, b) => a.localeCompare(b, 'es', { sensitivity: 'base', numeric: true });
+
 export default function Inventario() {
   const { productos, proveedores, actions } = useData();
   const [busqueda, setBusqueda] = useState('');
   const [categoria, setCategoria] = useState('');
+  const [proveedor, setProveedor] = useState('');
+  const [orden, setOrden] = useState('nombre-asc');
   const [editando, setEditando] = useState(null); // null | 'nuevo' | producto
 
   const categorias = useMemo(
@@ -16,17 +21,33 @@ export default function Inventario() {
     [productos],
   );
 
+  const nombresProveedores = useMemo(
+    () => [...new Set(productos.map((p) => p.proveedor).filter(Boolean))].sort(comparar),
+    [productos],
+  );
+
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    return productos.filter(
-      (p) =>
-        (!categoria || p.categoria === categoria) &&
-        (!q ||
-          p.nombre.toLowerCase().includes(q) ||
-          p.codigo.toLowerCase().includes(q) ||
-          p.proveedor.toLowerCase().includes(q)),
-    );
-  }, [productos, busqueda, categoria]);
+    const [campo, dir] = orden.split('-');
+    return productos
+      .filter(
+        (p) =>
+          (!categoria || p.categoria === categoria) &&
+          (!proveedor || (proveedor === SIN_PROVEEDOR ? !p.proveedor : p.proveedor === proveedor)) &&
+          (!q ||
+            p.nombre.toLowerCase().includes(q) ||
+            p.codigo.toLowerCase().includes(q) ||
+            p.proveedor.toLowerCase().includes(q)),
+      )
+      .sort((a, b) => {
+        // Al ordenar por proveedor, los productos sin proveedor van al final y
+        // dentro de cada proveedor se ordenan por nombre.
+        const signo = dir === 'desc' ? -1 : 1;
+        if (campo === 'nombre') return signo * comparar(a.nombre, b.nombre);
+        if (!a.proveedor !== !b.proveedor) return a.proveedor ? -1 : 1;
+        return signo * comparar(a.proveedor, b.proveedor) || comparar(a.nombre, b.nombre);
+      });
+  }, [productos, busqueda, categoria, proveedor, orden]);
 
   const guardar = async (form) => {
     if (editando === 'nuevo') await actions.crearProducto(form);
@@ -77,6 +98,19 @@ export default function Inventario() {
           {categorias.map((c) => (
             <option key={c}>{c}</option>
           ))}
+        </select>
+        <select value={proveedor} onChange={(e) => setProveedor(e.target.value)}>
+          <option value="">Todos los proveedores</option>
+          {nombresProveedores.map((n) => (
+            <option key={n}>{n}</option>
+          ))}
+          <option value={SIN_PROVEEDOR}>Sin proveedor</option>
+        </select>
+        <select value={orden} onChange={(e) => setOrden(e.target.value)} title="Ordenar">
+          <option value="nombre-asc">Producto (A → Z)</option>
+          <option value="nombre-desc">Producto (Z → A)</option>
+          <option value="proveedor-asc">Proveedor (A → Z)</option>
+          <option value="proveedor-desc">Proveedor (Z → A)</option>
         </select>
       </div>
 
